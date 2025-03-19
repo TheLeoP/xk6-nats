@@ -23,7 +23,7 @@ type RootModule struct{}
 type Nats struct {
 	conn    *natsio.Conn
 	vu      modules.VU
-	exports map[string]interface{}
+	exports map[string]any
 }
 
 // Ensure the interfaces are implemented correctly.
@@ -37,7 +37,7 @@ var (
 func (r *RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	mi := &Nats{
 		vu:      vu,
-		exports: make(map[string]interface{}),
+		exports: make(map[string]any),
 	}
 
 	mi.exports["Nats"] = mi.client
@@ -69,10 +69,12 @@ func (n *Nats) client(c sobek.ConstructorCall) *sobek.Object {
 			InsecureSkipVerify: true,
 		}
 	}
-	if cfg.Token != "" {
-		natsOptions.Token = cfg.Token
-	}
 
+	setCredentials := natsio.UserCredentials(cfg.CredentialsFile)
+	err = setCredentials(&natsOptions)
+	if err != nil {
+		common.Throw(rt, err)
+	}
 	conn, err := natsOptions.Connect()
 	if err != nil {
 		common.Throw(rt, err)
@@ -159,7 +161,6 @@ func (n *Nats) Subscribe(topic string, handler MessageHandler) (*Subscription, e
 		}
 		handler(message)
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +305,6 @@ func (n *Nats) JetStreamSubscribe(topic string, handler MessageHandler) (*Subscr
 		}
 		handler(message)
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -343,9 +343,9 @@ func (n *Nats) Request(subject, data string, headers map[string]string) (Message
 }
 
 type Configuration struct {
-	Servers []string
-	Unsafe  bool
-	Token   string
+	Servers         []string
+	Unsafe          bool
+	CredentialsFile string
 }
 
 type Message struct {
