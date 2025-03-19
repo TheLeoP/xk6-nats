@@ -70,10 +70,12 @@ func (n *Nats) client(c sobek.ConstructorCall) *sobek.Object {
 		}
 	}
 
-	setCredentials := natsio.UserCredentials(cfg.CredentialsFile)
-	err = setCredentials(&natsOptions)
-	if err != nil {
-		common.Throw(rt, err)
+	if cfg.CredentialsFile != "" {
+		setCredentials := natsio.UserCredentials(cfg.CredentialsFile)
+		err = setCredentials(&natsOptions)
+		if err != nil {
+			common.Throw(rt, err)
+		}
 	}
 	conn, err := natsOptions.Connect()
 	if err != nil {
